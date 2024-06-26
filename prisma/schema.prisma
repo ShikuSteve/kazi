@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PaymentMode {
+  APP
+  OTHER
+}
+
+enum Duration {
+  LESS_THAN_A_WEEK
+  LESS_THAN_2_WEEKS
+  ABOUT_A_MONTH
+  MORE_THAN_A_MONTH
+  NOT_SURE_STILL_PLANNING_AND_BUDGETING
+}
+
+enum ProfileType {
+  PROVIDER
+  CONSUMER
+}
+
+model ServiceConsumer {
+  id                String        @id @default(uuid())
+  serviceConsumerId String        @unique
+  firstName         String
+  lastName          String
+  email             String        @unique
+  phoneNumber       String        @unique
+  imageUrl          String
+  workProfile       WorkProfile[]
+  favourite         Favourite[]
+  contract          Contract[]
+  audit             Audit         @relation(fields: [auditId], references: [id])
+  auditId           String        @unique
+}
+
+model WorkProfile {
+  id                String          @id @default(uuid())
+  workProfileId     String          @unique
+  description       String?
+  personnel         Int             @default(1)
+  location          String
+  paymentMode       PaymentMode     @default(APP)
+  duration          Duration
+  startDate         DateTime
+  endDate           DateTime
+  serviceConsumer   ServiceConsumer @relation(fields: [serviceConsumerId], references: [serviceConsumerId])
+  serviceConsumerId String
+  rate              Rate?
+  Contract          Contract?
+  audit             Audit           @relation(fields: [auditId], references: [id])
+  auditId           String          @unique
+}
+
+model Rate {
+  id                String           @id @default(uuid())
+  rateId            String           @unique
+  amount            Int
+  currency          String
+  frequency         String
+  serviceProvider   ServiceProvider? @relation(fields: [serviceProviderId], references: [serviceProviderId])
+  serviceProviderId String           @unique
+  workProfile       WorkProfile      @relation(fields: [workProfileId], references: [workProfileId])
+  workProfileId     String           @unique
+}
+
+model Favourite {
+  id                String           @id @default(uuid())
+  favouriteId       String           @unique
+  email             String
+  profileType       ProfileType
+  serviceProvider   ServiceProvider? @relation(fields: [serviceProviderId], references: [serviceProviderId])
+  serviceProviderId String?
+  serviceConsumer   ServiceConsumer? @relation(fields: [serviceConsumerId], references: [serviceConsumerId])
+  serviceConsumerId String?
+}
+
+model ServiceProvider {
+  id                String       @id @default(uuid())
+  serviceProviderId String       @unique
+  firstName         String
+  lastName          String
+  email             String       @unique
+  professionType    String
+  profileName       String
+  description       String
+  phoneNumber       String       @unique
+  imageUrl          String
+  location          String
+  paymentMode       PaymentMode  @default(APP)
+  rate              Rate?
+  favourite         Favourite[]
+  workSample        WorkSample[]
+  schedule          Schedule[]
+  contract          Contract[]
+  audit             Audit        @relation(fields: [auditId], references: [id])
+  auditId           String       @unique
+}
+
+model WorkSample {
+  id                String          @id @default(uuid())
+  workSampleId      String          @unique
+  title             String
+  description       String
+  imageUrls         String
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [serviceProviderId])
+  serviceProviderId String
+  audit             Audit           @relation(fields: [auditId], references: [id])
+  auditId           String          @unique
+}
+
+model Contract {
+  id                      String          @id @default(uuid())
+  contractId              String          @unique
+  location                String
+  paymentMode             PaymentMode     @default(APP)
+  duration                Duration
+  startDate               DateTime
+  endDate                 DateTime
+  serviceProviderSignDate DateTime
+  serviceConsumerSignDate DateTime
+  serviceProvider         ServiceProvider @relation(fields: [serviceProviderId], references: [serviceProviderId])
+  serviceProviderId       String
+  payment                 Payment?
+  rating                  Rating[]
+  serviceConsumer         ServiceConsumer @relation(fields: [serviceConsumerId], references: [serviceConsumerId])
+  serviceConsumerId       String
+  workProfile             WorkProfile     @relation(fields: [workProfileId], references: [id])
+  workProfileId           String          @unique
+  audit                   Audit           @relation(fields: [auditId], references: [id])
+  auditId                 String          @unique
+}
+
+model Rating {
+  id                String      @id @default(uuid())
+  ratingId          String      @unique
+  serviceProviderId String?
+  serviceConsumerId String?
+  email             String
+  score             Int
+  comments          String
+  imageUrls         String
+  profileType       ProfileType
+  contract          Contract    @relation(fields: [contractId], references: [contractId])
+  contractId        String
+  audit             Audit       @relation(fields: [auditId], references: [id])
+  auditId           String      @unique
+}
+
+model Audit {
+  id             String    @id @default(uuid())
+  createdAt      DateTime  @default(now()) //created on 
+  createdByEmail String // created by email
+  createdByIp    String //created by ip
+  updatedAt      DateTime  @default(now()) //updated on
+  updatedBy      String //updated by email
+  updatedByIp    String //updated by ip
+  deletedAt      DateTime? //deleted on
+  deletedByEmail String? //deleted by email
+  deletedByIp    String? //deleted by ip
+
+  ServiceConsumer ServiceConsumer?
+  WorkProfile     WorkProfile?
+  ServiceProvider ServiceProvider?
+  WorkSample      WorkSample?
+  Rating          Rating?
+  Payment         Payment?
+  Schedule        Schedule?
+  Contract        Contract?
+}
+
+model Payment {
+  id            String      @id @default(uuid())
+  date          DateTime
+  transactionId String      @unique
+  mode          PaymentMode @default(APP)
+  email         String
+  contract      Contract    @relation(fields: [contractId], references: [contractId])
+  contractId    String      @unique
+  audit         Audit       @relation(fields: [auditId], references: [id])
+  auditId       String      @unique
+}
+
+model Schedule {
+  id                String          @id @default(uuid())
+  date              DateTime
+  scheduleId        String          @unique
+  email             String
+  serviceProvider   ServiceProvider @relation(fields: [serviceProviderId], references: [serviceProviderId])
+  serviceProviderId String
+  audit             Audit           @relation(fields: [auditId], references: [id])
+  auditId           String          @unique
+}
